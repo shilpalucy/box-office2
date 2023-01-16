@@ -1,70 +1,101 @@
-import React,{useState} from 'react';
-import ActorGrid from '../components/Actor/ActorGrid';
+import React, { useState, useCallback } from 'react';
 import MainPageLayout from '../components/MainPageLayout';
-import ShowGrid from '../components/show/ShowGrid';
 import { apiGet } from '../misc/config';
+import ShowGrid from '../components/show/ShowGrid';
+import ActorGrid from '../components/actor/ActorGrid';
+import { useLastQuery } from '../misc/custom-hooks';
+import {
+  SearchInput,
+  RadioInputsWrapper,
+  SearchButtonWrapper,
+} from './Home.styled';
+import CustomRadio from '../components/CustomRadio';
 
-const Home = () => {
-  
-  const[Input,setInput]=useState("");
-  const[result,setResult]=useState(null);
-  const[searchOption,setSearchOption]=useState("shows");
-  const isSearchOption = searchOption==="shows";
-
-  const onSearch = () => {
-    
-    apiGet(`/search/${searchOption}?q=${Input}`).then(results=>{
-      setResult(results)});
-      
-    }
-
-    
-     
-  
-
-  const onKeyDown=(ev)=>{
-    if(ev.keyCode===13)
-      onSearch();
+const renderResults = results => {
+  if (results && results.length === 0) {
+    return <div>No results</div>;
   }
 
-  const onEventChange = (ev) => {
-    setInput(ev.target.value);
-  
-  }
-  const onRadioChange = (ev) => {
-    setSearchOption(ev.target.value);
-    console.log(searchOption);
-  }
-
-  const renderResults=() => {
-    if(result  && result.length===0){
-    return <div>noresults</div>
-    }
-    if(result && result.length>0) {
-      
-      return(result[0].show
-        ? <ShowGrid data={result}/>
-        : <ActorGrid data={result}/>
+  if (results && results.length > 0) {
+    return results[0].show ? (
+      <ShowGrid data={results} />
+    ) : (
+      <ActorGrid data={results} />
     );
   }
-    return (null);
-}
 
-return(
-      <MainPageLayout>
-      <input type="text" onChange = {onEventChange} onKeyDown={onKeyDown} value={Input}/>
-      <button type="button" onClick= {onSearch}>Search</button>
-      <label htmlFor="show-id">
-        <input id="show-id" type="radio" value="shows" checked={isSearchOption} onChange={onRadioChange}/>Shows
-      </label>
-      <label htmlFor="actors-id">
-        <input id="actors-id" type="radio" value="people" checked={!isSearchOption} onChange={onRadioChange}/>Actors
-      </label>
-        
-       
-      {renderResults()};
-      </MainPageLayout>
-)
+  return null;
+};
+
+const Home = () => {
+  const [input, setInput] = useLastQuery();
+  const [results, setResults] = useState(null);
+  const [searchOption, setSearchOption] = useState('shows');
+
+  const isShowsSearch = searchOption === 'shows';
+  const onSearch = () => {
+    apiGet(`/search/${searchOption}?q=${input}`).then(result => {
+      setResults(result);
+    });
+  };
+
+  const onInputChange = useCallback(
+    ev => {
+      setInput(ev.target.value);
+    },
+    [setInput]
+  );
+
+  const onKeyDown = ev => {
+    if (ev.keyCode === 13) {
+      onSearch();
+    }
+  };
+
+  const onRadioChange = useCallback(ev => {
+    setSearchOption(ev.target.value);
+  }, []);
+
+  return (
+    <MainPageLayout>
+      <SearchInput
+        type="text"
+        placeholder="Search for something"
+        onChange={onInputChange}
+        onKeyDown={onKeyDown}
+        value={input}
+      />
+
+      <RadioInputsWrapper>
+        <div>
+          <CustomRadio
+            label="Shows"
+            id="shows-search"
+            value="shows"
+            checked={isShowsSearch}
+            onChange={onRadioChange}
+          />
+        </div>
+
+        <div>
+          <CustomRadio
+            label="Actors"
+            id="actors-search"
+            value="people"
+            checked={!isShowsSearch}
+            onChange={onRadioChange}
+          />
+        </div>
+      </RadioInputsWrapper>
+
+      <SearchButtonWrapper>
+        <button type="button" onClick={onSearch}>
+          Search
+        </button>
+      </SearchButtonWrapper>
+      {renderResults(results)}
+    </MainPageLayout>
+  );
 };
 
 export default Home;
